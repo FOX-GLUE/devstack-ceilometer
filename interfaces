@@ -1,0 +1,58 @@
+# interfaces(5) file used by ifup(8) and ifdown(8)
+auto lo
+iface lo inet loopback
+
+# The primary network interface
+allow-hotplug eth0
+
+# The external bridge 
+auto br-ex
+allow-ovs br-ex
+iface br-ex inet static
+ovs_type OVSBridge
+ovs_ports eth0
+address 172.16.163.200
+netmask 255.255.255.0
+gateway 172.16.163.1
+dns-nameservers 8.8.8.8
+pre-up ovs-vsctl --may-exist add-br br-ex
+pre-up ovs-vsctl --may-exist add-port br-ex eth0
+pre-up ifconfig br-ex up
+post-up ip addr add 172.16.163.2/24 dev br-ex
+post-down ovs-vsctl --if-exists del-port br-ex eth0
+post-down ip addr delete 172.16.163.2/24 dev br-ex
+post-down ifconfig br-ex down
+
+#brigde
+
+#auto br0
+#iface br0 inet static
+#address 172.16.163.200
+#netmask 255.255.255.0
+#network 172.16.163.0
+#broadcast 172.16.163.255
+#gateway 172.16.163.1
+#dns-nameserver 8.8.8.8 172.16.163.1
+#bridge_ports eth0 eth0.10
+#bridge_fd 0
+#bridge_maxwait 0
+#bridge_stp off
+
+
+#eth0
+#auto eth0
+#iface eth0 inet static
+#address 172.16.163.200
+#netmask 255.255.255.0
+#network 172.16.163.0
+#broadcast 172.16.163.255
+#gateway 172.16.163.1
+#dns-nameserver 8.8.8.8 172.16.163.1
+
+
+#vlan
+auto eth0.10
+iface eth0.10 inet static
+address 192.168.1.1
+netmask 255.255.255.0
+vlan-raw-device eth0
