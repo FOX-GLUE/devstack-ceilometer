@@ -1,0 +1,159 @@
+link penting : http://therandomsecurityguy.com/devstack-single-nic-configuration/
+
+git clone https://git.openstack.org/openstack-dev/devstack -b stable/mitaka
+
+
+pas clone dan stack ingat jangan sudo
+
+
+
+
+
+
+
+
+
+1. install ubuntu seperti biasa
+2. check network interfacenya
+
+ini config network interfacenya
+
+3. atur network interfacenya
+
+iface p4p1 inet static
+address 172.16.160.121
+netmask 255.255.255.0
+network 172.16.160.0
+broadcast 172.16.160.255
+gateway 172.16.160.1
+dns-nameserver 8.8.8.8
+dns-nameserver 172.16.160.1
+
+kemudian sudo reboot n update ubuntunya
+
+
+4. sudo apt-get install bridge-utils
+5. sudo su modprobe 8021q 
+6. sudo su vconfig add p4p1 5 
+7. klo error, install vlan: sudo apt-get install vlan
+8. tambah di network interface
+
+
+auto p4p1.5
+iface p4p1.5 inet static
+address 192.168.1.1
+netmask 255.255.255.0
+
+kemudian sudo reboot
+
+9. sudo su
+10. echo 1 > /proc/sys/net/ipv4/ip_forward 
+11. echo 1 > /proc/sys/net/ipv4/conf/p4p1/proxy_arp 
+12. iptables -t nat -A POSTROUTING -o p4p1 -j MASQUERADE
+
+
+14. bikin agar usernamenya ndak masukin pass:
+echo "ubuntu ALL=(ALL) NOPASSWD: ALL" » /etc/sudoers 
+
+ket:ubuntu tu nama user, inget sudo
+
+15. sudo apt-get install git -y 
+16. exit sudo
+17 git clone https://git.openstack.org/openstack-dev/devstack -b stable/mitaka
+18. cd /home/ubuntu/devstack
+19. nano local.conf
+20. copy confignya 
+
+
+
+[[local|localrc]]
+#buat ip private
+FIXED_RANGE=192.168.1.0/24
+NETWORK_GATEWAY=192.168.1.1
+FIXED_NETWORK_SIZE=256
+Q_USE_SECGROUP=True
+
+#buat ip floating dan diisi ke eth0
+FLOATING_RANGE="172.16.160.0/24"
+Q_FLOATING_ALLOCATION_POOL=start=172.16.160.122,end=172.16.160.132
+PUBLIC_NETWORK_GATEWAY="172.16.160.1"
+PUBLIC_INTERFACE=p4p1
+
+#buat bridge untuk koneksi keluar
+# Open vSwitch provider networking configuration
+OVS_PHYSICAL_BRIDGE=br-ex
+PUBLIC_BRIDGE=br-ex
+OVS_BRIDGE_MAPPINGS=public:br-ex
+Q_PLUGIN=ml2
+Q_AGENT=openvswitch
+Q_USE_DEBUG_COMMAND=True
+Q_L3_ENABLED=True
+Q_L3_ROUTER_PER_TENANT=True
+ENABLE_TENANT_TUNNELS=True
+TENANT_TUNNEL_RANGE=-1:1000
+Q_ML2_TENANT_NETWORK_TYPE=vxlan
+Q_USE_PROVIDERNET_FOR_PUBLIC=True
+OVS_ENABLE_TUNNELING=True
+
+#setting password
+# If the ``SERVICE_TOKEN`` and ``*_PASSWORD`` variables are not set
+# here you will be prompted to enter values for them by ``stack.sh``
+# and they will be added to ``local.conf``.
+MYSQL_PASSWORD=stack
+SERVICE_TOKEN=stack
+ADMIN_PASSWORD=stack
+RABBIT_PASSWORD=stack
+SERVICE_PASSWORD=stack
+
+# ``HOST_IP`` (ip eth0)
+HOST_IP=172.16.160.121
+
+
+
+
+# Logging
+# -------
+# By default ``stack.sh`` output only goes to the terminal where it runs. It can
+# be configured to additionally log to a file by setting ``LOGFILE`` to the full
+# path of the destination log file. A timestamp will be appended to the given name.
+#LOGFILE=$DEST/logs/stack.sh.log
+# Old log files are automatically removed after 7 days to keep things neat. Change
+# the number of days by setting ``LOGDAYS``.
+#LOGDAYS=2
+# Nova logs will be colorized if ``SYSLOG`` is not set; turn this off by setting
+# ``LOG_COLOR`` false.
+#LOG_COLOR=False
+#component yang diinstall
+disable_service n-net
+VIRT_DRIVER=libvirt
+#enable_service q-svc
+#enable_service q-agt
+#enable_service q-dhcp
+#enable_service q-l3
+#enable_service q-meta
+enable_service n-novnc
+enable_service n-cauth
+enable_service q-svc
+enable_service q-agt
+enable_service q-dhcp
+enable_service q-l3
+enable_service q-meta
+enable_service q-lbaas
+enable_service neutron
+
+#Ceilometer-services
+enable_service ceilometer-acompute ceilometer-acentral ceilometer-anotification ceilometer-collector ceilometer-api
+
+#Ceilometer-alarm
+enable_service ceilometer-alarm-notifier ceilometer-alarm-evaluator
+
+
+# Optional, to enable tempest configuration as part of devstack
+enable_service tempest
+#OFFLINE=yes
+###end local.conf
+
+
+
+21. ./stack.sh
+
